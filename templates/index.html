@@ -1,0 +1,207 @@
+{% with page_title='ChatBot' %}
+{% include '_header.html' %}
+        <ul class="nav nav-tabs">
+            {% for session in sessions %}
+                <li class="nav-item">
+                    <a class="nav-link {{ 'active' if session.id == current_session_id }}" href="{{ url_for('index', session_id=session.id) }}">Chat {{ session.id }}</a>
+                </li>
+            {% endfor %}
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('new_chat', chat_type='GENERAL') }}">New</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('new_chat', chat_type='GAME') }}">New Game</a>
+            </li>
+        </ul>
+        {% if sessions and current_session %}
+        
+        <div class="card">
+            <div class="card-body" id="chat-body">
+                <div id="chat-box">
+                    <div class="chat-commands">
+                        {{ current_session.chat_type }}:
+                        <a href="#bottom" class="util">To Bottom</a> |
+                        <a href="#" class="delete-chat-btn">Delete Chat</a>
+                    </div>
+
+                    {% for message in messages %}
+                        <div class="message {{ message.role }} {{ 'text-right' if message.role == 'user' else 'text-left' }}">
+                            <button class="delete-btn" data-message-id="{{ message.id }}">X</button>
+                            <h3 class="role">{{ 'User #'+current_user.id|string if message.role == 'user' else 'ChatBot' }}</h3>
+                            <div class="content">{{ message.content|markdown|safe }}</div>
+                            
+                        </div>
+                    {% endfor %}
+                </div>
+                <form id="send_message" method="post">
+                    <input type="hidden" name="session_id" value="{{ session_id }}">
+                    <div class="input-group mt-3">
+                        {% if current_session.chat_type == 'GAME' %}
+                        <input type="text" name="user_message" id="user_message" class="form-control" placeholder="Type your message..." />
+                        {% else %}
+                        <textarea name="user_message" id="user_message" class="form-control" placeholder="Type your message..."></textarea>
+                        {% endif %}
+                        <div class="input-group-append">
+                            <button type="submit" class="btn btn-primary">Send</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <a name="bottom"></a>
+
+        <script>
+        // jQuery code to handle the form submission
+        $(document).ready(function() {
+            //$("#send_message")[0].scrollIntoView({behavior: 'smooth' });
+
+            $('textarea#user_message').on('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+
+            $('textarea#user_message').on('keydown', function(event) {
+                if (event.shiftKey && event.keyCode === 13) {   // Shift+Enter
+                    event.preventDefault();                     // Prevent line break
+                    $('#send_message').submit();
+                }
+            });
+
+            $("#send_message").submit(function(event) {
+                event.preventDefault(); // Prevent form submission
+                setTimeout(() => {
+                    $('#send_message').addClass('loading');
+                    // Make an AJAX request
+                    $.ajax({
+                        url: $(this).attr("action"), // URL to submit the form data
+                        method: $(this).attr("method"), // HTTP method (GET or POST)
+                        data: $(this).serialize(), // Form data to send
+
+                        success: function(response) {
+                            // Slice out the desired div from the response
+                            var slicedDiv = $(response).find("#chat-body").html();
+
+                            // Replace the contents of an existing div with the sliced div
+                            $("#chat-body").html(slicedDiv);
+                            $("#send_message")[0].scrollIntoView({behavior: 'smooth' });
+                        },
+                        error: function() {
+                            // Show the modal dialog in case of an error
+                            $("#errorDialog").dialog({
+                            modal: true,
+                            buttons: {
+                                Ok: function() {
+                                        $(this).dialog("close");
+                                    }
+                                }
+                            });
+                        },
+                        complete: function() {
+                            // Remove the loading indicator
+                            $("#send_message").removeClass("loading");
+                        }
+                    });
+                }, 100);
+            });
+
+
+            $(".delete-btn").click(function() {
+                var messageId = $(this).data('message-id');
+                // Get the message content for display in the confirmation dialog
+                var messageContent = $(this).siblings('.content').text();
+                // Truncate the message content to the first 100 characters
+                var truncatedContent = messageContent.slice(0, 100);
+                // Set the truncated content in the confirmation dialog
+                $("#deleteMessageContent").text(truncatedContent);
+
+                // Use jQuery UI dialog to confirm deletion
+                $("#deleteConfirmDialog").dialog({
+                    modal: true,
+                    buttons: {
+                        Delete: function() {
+                            // Perform AJAX request to delete message
+                            $.ajax({
+                                url: "/delete_msg/" + messageId,
+                                type: "POST",
+                                success: function() {
+                                    // Remove the message from the chat box
+                                    window.location.reload();
+                                },
+                                error: function() {
+                                    // Show error modal dialog
+                                    $("#errorDialog").dialog({
+                                        modal: true,
+                                        buttons: {
+                                            Ok: function() {
+                                                $(this).dialog("close");
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+                            $(this).dialog("close");
+                        },
+                        Cancel: function() {
+                            $(this).dialog("close");
+                        }
+                    }
+                });
+
+            });
+
+            $(".delete-chat-btn").click(function() {
+                // Use jQuery UI dialog to confirm deletion
+                $("#deleteChatConfirmDialog").dialog({
+                    modal: true,
+                    buttons: {
+                        Delete: function() {
+                            // Perform AJAX request to delete message
+                            $.ajax({
+                                url: "/delete_chat/{{ current_session.id }}",
+                                type: "POST",
+                                success: function() {
+                                    // Remove the message from the chat box
+                                    window.location = '/';
+                                },
+                                error: function() {
+                                    // Show error modal dialog
+                                    $("#deleteChatErrorDialog").dialog({
+                                        modal: true,
+                                        buttons: {
+                                            Ok: function() {
+                                                $(this).dialog("close");
+                                            }
+                                        }
+                                    });
+                                }
+                            });
+                            $(this).dialog("close");
+                        },
+                        Cancel: function() {
+                            $(this).dialog("close");
+                        }
+                    }
+                });
+
+            });
+
+        });
+        </script>
+        <div id="deleteConfirmDialog" title="Confirm Message Deletion" style="display: none;">
+            <p>Are you sure you want to delete the message that starts with:</p>
+            <pre id="deleteMessageContent"></pre>
+            <p>This will impact future responses from the model!</p>
+        </div>
+        <div id="errorDialog" title="Error" style="display: none;">
+            <p>An error occurred while deleting the message.</p>
+        </div>
+        <div id="deleteChatConfirmDialog" title="Confirm Chat Deletion" style="display: none;">
+            <p>Are you sure you want to delete the current chat:</p>
+            <pre id="deleteMessageContent"></pre>
+        </div>
+        <div id="deleteChatErrorDialog" title="Error" style="display: none;">
+            <p>An error occurred while deleting the chat.</p>
+        </div>
+        {% endif %}
+{% include '_footer.html' %}
+{% endwith %}

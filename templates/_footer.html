@@ -1,0 +1,19 @@
+    </div>
+</div>
+
+{% if current_user.is_authenticated %}
+<br>
+<div class="container">
+    <div class="mt-5">
+        <center>
+            <form action="{{ url_for('logout') }}" method="GET">
+                <button class="btn" type="submit">Logout</button>
+            </form>
+        </center>
+    </div>
+</div>
+{% endif %}
+<br><br>
+
+</body>
+</html>
