@@ -17,7 +17,7 @@ from models import db, User, ChatSession, Message
 pp=pprint.PrettyPrinter()
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////mnt/d/Dev/Projects/Python/chat.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI')
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 app.config['OPENAI_API_KEY'] = os.environ.get('OPENAI_API_KEY')
 app.config['SMTP_HOST'] = os.environ.get('SMTP_HOST')

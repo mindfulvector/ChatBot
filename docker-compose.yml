@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    volumes:
+      - .:/app
+      - chatbot-data-volume:/usr/data
+    environment:
+      - SQLALCHEMY_DATABASE_URI
+      - OPENAI_API_KEY
+      - SECRET_KEY
+      - SMTP_HOST
+      - SMTP_FROM
+      - SMTP_USERNAME
+      - SMTP_PASSWORD
+      - SMTP_PORT
+
+    ports:
+      - "5050:5000"
+
+volumes:
+  chatbot-data-volume:
